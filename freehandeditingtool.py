@@ -16,8 +16,11 @@ class FreehandEditingTool(QgsMapTool):
         self.rb = None
         self.mCtrl = None
         self.drawing = False
+
+        self.mPause = False
         self.ignoreclick = False
-        #our own fancy cursor
+        self.canvas.keyPressed.connect(self.keyPressEvent)
+        self.canvas.keyReleased.connect(self.keyReleaseEvent)
         self.cursor = QCursor(QPixmap(["16 16 3 1",
                                        "      c None",
                                        ".     c #FF0000",
@@ -40,16 +43,21 @@ class FreehandEditingTool(QgsMapTool):
                                        "       +.+      "]))
 
     def keyPressEvent(self, event):
+        dx = self.canvas.extent().width() / 4
+        dy = self.canvas.extent().height() / 4
         if event.key() == Qt.Key_Control:
             self.mCtrl = True
+        elif event.key() == Qt.Key_Space:
+            self.mPause = not self.mPause
 
     def keyReleaseEvent(self, event):
+
         if event.key() == Qt.Key_Control:
             self.mCtrl = False
 
     def canvasPressEvent(self, event):
-        if self.ignoreclick or self.drawing:
-            # ignore secondary canvasPressEvents if already drag-drawing
+        if self.ignoreclick or self.drawing or self.mPause:
+            # ignore secondary canvasPressEvents if already drag-drawing or in pan mode
             # NOTE: canvasReleaseEvent will still occur (ensures rb is deleted)
             # click on multi-button input device will halt drag-drawing
             return
@@ -97,13 +105,14 @@ class FreehandEditingTool(QgsMapTool):
             self.rb.addPoint(pointMap)
 
     def canvasMoveEvent(self, event):
-        if self.ignoreclick or not self.rb:
+        if self.ignoreclick or not self.rb or self.mPause:
             return
-        self.rb.addPoint(self.toMapCoordinates(event.pos()))
-        #print self.rb.asGeometry().exportToWkt()
+        else:
+            self.rb.addPoint(self.toMapCoordinates(event.pos()))
+            #print self.rb.asGeometry().exportToWkt()
 
     def canvasReleaseEvent(self, event):
-        if self.ignoreclick:
+        if self.ignoreclick or self.mPause:
             return
         self.drawing = False
         if not self.rb:
