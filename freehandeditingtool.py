@@ -16,7 +16,6 @@ class FreehandEditingTool(QgsMapTool):
         self.rb = None
         self.mCtrl = None
         self.drawing = False
-
         self.mPause = False
         self.ignoreclick = False
         self.canvas.keyPressed.connect(self.keyPressEvent)
@@ -47,17 +46,16 @@ class FreehandEditingTool(QgsMapTool):
         dy = self.canvas.extent().height() / 4
         if event.key() == Qt.Key_Control:
             self.mCtrl = True
-        elif event.key() == Qt.Key_Space:
-            self.mPause = not self.mPause
+        elif event.key() == Qt.Key_Space and self.drawing:
+            self.setIgnoreClick(not self.ignoreclick)
 
     def keyReleaseEvent(self, event):
-
         if event.key() == Qt.Key_Control:
             self.mCtrl = False
 
     def canvasPressEvent(self, event):
-        if self.ignoreclick or self.drawing or self.mPause:
-            # ignore secondary canvasPressEvents if already drag-drawing or in pan mode
+        if self.ignoreclick or self.drawing:
+            # ignore secondary canvasPressEvents if already drag-drawing or explicitly paused
             # NOTE: canvasReleaseEvent will still occur (ensures rb is deleted)
             # click on multi-button input device will halt drag-drawing
             return
@@ -105,18 +103,18 @@ class FreehandEditingTool(QgsMapTool):
             self.rb.addPoint(pointMap)
 
     def canvasMoveEvent(self, event):
-        if self.ignoreclick or not self.rb or self.mPause:
+        if self.ignoreclick or not self.rb:
             return
-        else:
-            self.rb.addPoint(self.toMapCoordinates(event.pos()))
-            #print self.rb.asGeometry().exportToWkt()
+        self.rb.addPoint(self.toMapCoordinates(event.pos()))
+        #print self.rb.asGeometry().exportToWkt()
 
     def canvasReleaseEvent(self, event):
-        if self.ignoreclick or self.mPause:
+        if self.ignoreclick:
             return
         self.drawing = False
         if not self.rb:
             return
+
         if self.rb.numberOfVertices() > 2:
             geom = self.rb.asGeometry()
             self.rbFinished.emit(geom)
