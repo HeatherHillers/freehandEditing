@@ -16,10 +16,10 @@ class FreehandEditingTool(QgsMapTool):
         self.rb = None
         self.mCtrl = None
         self.drawing = False
-        self.mPause = False
         self.ignoreclick = False
         self.canvas.keyPressed.connect(self.keyPressEvent)
         self.canvas.keyReleased.connect(self.keyReleaseEvent)
+        #our own fancy cursor
         self.cursor = QCursor(QPixmap(["16 16 3 1",
                                        "      c None",
                                        ".     c #FF0000",
@@ -42,8 +42,6 @@ class FreehandEditingTool(QgsMapTool):
                                        "       +.+      "]))
 
     def keyPressEvent(self, event):
-        dx = self.canvas.extent().width() / 4
-        dy = self.canvas.extent().height() / 4
         if event.key() == Qt.Key_Control:
             self.mCtrl = True
         elif event.key() == Qt.Key_Space and self.drawing:
@@ -114,7 +112,6 @@ class FreehandEditingTool(QgsMapTool):
         self.drawing = False
         if not self.rb:
             return
-
         if self.rb.numberOfVertices() > 2:
             geom = self.rb.asGeometry()
             self.rbFinished.emit(geom)
